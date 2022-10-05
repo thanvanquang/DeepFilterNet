@@ -8,7 +8,7 @@ import torch
 from torch import Tensor
 
 from df.evaluation_utils import as_numpy, dnsmos_api_req
-from df.io import load_audio
+from df.inout import load_audio
 from df.utils import download_file, get_cache_dir
 
 URL_P808 = "https://dnsmos.azurewebsites.net/score"

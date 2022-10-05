@@ -59,6 +59,11 @@ class MultiFrameModule(nn.Module, ABC):
         """
         spec_u = self.spec_unfold(torch.view_as_complex(spec))
         coefs = torch.view_as_complex(coefs)
+        # spec_u = self.spec_unfold(to_complex(torch.index_select(spec, 4, torch.tensor([0]).cuda()).squeeze(-1),
+        #                                      torch.index_select(spec, 4, torch.tensor([1]).cuda()).squeeze(-1)))
+        # coefs = to_complex(torch.index_select(coefs, 4, torch.tensor([0]).cuda()).squeeze(-1),
+        #                    torch.index_select(coefs, 4, torch.tensor([1]).cuda()).squeeze(-1))
+
         spec_f = spec_u.narrow(-2, 0, self.num_freqs)
         spec_f = self.forward_impl(spec_f, coefs)
         if self.training:
@@ -88,6 +93,9 @@ class MultiFrameModule(nn.Module, ABC):
         """
         ...
 
+
+def to_complex(real, imag):
+    return torch.complex(real, imag)
 
 def psd(x: Tensor, n: int) -> Tensor:
     """Compute the PSD correlation matrix Rxx for a spectrogram.

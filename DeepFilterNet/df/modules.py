@@ -695,6 +695,21 @@ class SqueezedGRU(nn.Module):
         return x, h
 
 
+class View(nn.Module):
+    def __init__(self, dim,  shape):
+        super(View, self).__init__()
+        self.dim = dim
+        self.shape = shape
+
+    def forward(self, input):
+        if self.dim == -1:
+            new_shape = list(input.shape)[:self.dim] + list(self.shape)
+        else:
+            new_shape = list(input.shape)[:self.dim] + list(self.shape) + list(input.shape)[self.dim + 1:]
+
+        return input.view(*new_shape)
+
+
 class GroupedLinearEinsum(nn.Module):
     input_size: Final[int]
     hidden_size: Final[int]
@@ -716,12 +731,15 @@ class GroupedLinearEinsum(nn.Module):
         )
         self.reset_parameters()
 
+        self.View = View(dim=-1, shape=(self.groups, self.ws))
+
     def reset_parameters(self):
         init.kaiming_uniform_(self.weight, a=math.sqrt(5))  # type: ignore
 
     def forward(self, x: Tensor) -> Tensor:
         # x: [..., I]
-        x = x.unflatten(-1, (self.groups, self.ws))  # [..., G, I/G]
+        # x = x.unflatten(-1, (self.groups, self.ws))  # [..., G, I/G]
+        x = self.View(x)
         x = torch.einsum("...gi,...gih->...gh", x, self.weight)  # [..., G, H/G]
         x = x.flatten(2, 3)  # [B, T, H]
         return x

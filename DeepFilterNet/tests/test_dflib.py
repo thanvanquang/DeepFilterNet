@@ -9,7 +9,7 @@ from torch import Tensor
 
 import libdf
 from df.config import config
-from df.io import get_test_sample, save_audio
+from df.inout import get_test_sample, save_audio
 from df.model import ModelParams
 from df.utils import _calculate_norm_alpha
 from df.visualization import spec_figure

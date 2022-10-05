@@ -19,7 +19,7 @@ from torchaudio.functional import highpass_biquad
 from torchaudio.transforms import Resample
 
 from df.enhance import df_features
-from df.io import get_resample_params, load_audio, resample, save_audio
+from df.inout import get_resample_params, load_audio, resample, save_audio
 from df.logger import log_metrics
 from df.model import ModelParams
 from df.sepm import composite as composite_py

@@ -11,7 +11,7 @@ from torch.nn import functional as F
 
 from df import config
 from df.checkpoint import load_model as load_model_cp
-from df.io import load_audio, resample, save_audio
+from df.inout import load_audio, resample, save_audio
 from df.logger import init_logger
 from df.model import ModelParams
 from df.modules import get_device
@@ -91,11 +91,13 @@ def init_df(
     if model_base_dir == "DeepFilterNet":
         default_model = "DeepFilterNet"
         use_default_model = True
+        model_base_dir = '../models/DeepFilterNet/'
     elif model_base_dir == "DeepFilterNet2":
         use_default_model = True
-    if model_base_dir is None or use_default_model:
-        use_default_model = True
-        model_base_dir = maybe_download_model(default_model)
+        model_base_dir = '../models/DeepFilterNet2/'
+    # if model_base_dir is None or use_default_model:
+    #     use_default_model = True
+    #     model_base_dir = maybe_download_model(default_model)
 
     if not os.path.isdir(model_base_dir):
         raise NotADirectoryError("Base directory not found at {}".format(model_base_dir))
@@ -172,6 +174,10 @@ def enhance(
     nb_df = getattr(model, "nb_df", getattr(model, "df_bins", ModelParams().nb_df))
     spec, erb_feat, spec_feat = df_features(audio, df_state, nb_df, device=get_device())
     enhanced = model(spec, erb_feat, spec_feat)[0].cpu()
+
+    # export model to onnx
+    torch2onnx(model, spec, erb_feat, spec_feat)
+
     enhanced = as_complex(enhanced.squeeze(1))
     if atten_lim_db is not None and abs(atten_lim_db) > 0:
         lim = 10 ** (-abs(atten_lim_db) / 20)
@@ -218,6 +224,30 @@ def parse_epoch_type(value: str) -> Union[int, str]:
         assert value in ("best", "latest")
         return value
 
+def torch2onnx(model: nn.Module, spec: Tensor, erb_feat: Tensor, spec_feat: Tensor):
+    import onnx
+    model.eval()
+    input_names = ['input1', 'input2', 'input3']
+    output_names = ['output']
+    # dynamic = {'input': {0: 'batch', 2: 'height', 3: 'width'}}  # shape(1,3,240,240)
+    # dynamic['output'] = {0: 'batch', 1: 'sigmoid'}  # shape(1,25200,85)
+
+    model_name_onnx = '../models/DepthFilterNet2/depthfilternet2.onnx'
+
+    torch.onnx.export(
+        model,  # --dynamic only compatible with cpu
+        (spec, erb_feat, spec_feat),
+        model_name_onnx,
+        verbose=False,
+        opset_version=12,
+        do_constant_folding=True,
+        input_names=input_names,
+        output_names=output_names,
+        dynamic_axes=None)
+
+    # Checks
+    model_onnx = onnx.load(model_name_onnx)  # load onnx model
+    onnx.checker.check_model(model_onnx)  # check onnx model
 
 def setup_df_argument_parser(default_log_level: str = "INFO") -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
@@ -225,7 +255,7 @@ def setup_df_argument_parser(default_log_level: str = "INFO") -> argparse.Argume
         "--model-base-dir",
         "-m",
         type=str,
-        default=None,
+        default='DeepFilterNet2',
         help="Model directory containing checkpoints and config. "
         "To load a pretrained model, you may just provide the model name, e.g. `DeepFilterNet`. "
         "By default, the pretrained DeepFilterNet2 model is loaded.",
@@ -274,12 +304,20 @@ def run():
         default=None,
         help="Attenuation limit in dB by mixing the enhanced signal with the noisy signal.",
     )
+    # parser.add_argument(
+    #     "noisy_audio_files",
+    #     type=str,
+    #     nargs="+",
+    #     help="List of noise files to mix with the clean speech file.",
+    # )
+
     parser.add_argument(
-        "noisy_audio_files",
+        "--noisy_audio_files",
         type=str,
-        nargs="+",
+        default=['../../assets/noisy_snr0.wav'],
         help="List of noise files to mix with the clean speech file.",
     )
+
     main(parser.parse_args())
 
 

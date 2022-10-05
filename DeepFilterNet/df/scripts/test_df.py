@@ -13,7 +13,7 @@ from torch import Tensor
 import df
 from df.enhance import DF, enhance, init_df
 from df.evaluation_utils import HAS_OCTAVE, composite, si_sdr_speechmetrics, stoi
-from df.io import load_audio, save_audio
+from df.inout import load_audio, save_audio
 
 __a_tol = 1e-4
 __r_tol = 1e-4
