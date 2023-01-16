@@ -47,7 +47,7 @@ dnsmos-local = ["onnxruntime"]
 deepFilter = "df.enhance:run"
 
 [tool.poetry.dev-dependencies]
-poethepoet = "^0.11"
+poethepoet = "^0.18"
 pre-commit = "^2.17"
 
 [tool.poe.tasks]
